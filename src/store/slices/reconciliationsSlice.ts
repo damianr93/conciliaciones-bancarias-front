@@ -27,6 +27,7 @@ interface ReconciliationsState {
     system: {
       issueDateCol: string;
       dueDateCol: string;
+      descriptionCol: string;
       amountMode: 'single' | 'debe-haber';
       amountCol: string;
       debeCol: string;
@@ -35,6 +36,7 @@ interface ReconciliationsState {
   };
   windowDays: number;
   cutDate: string;
+  bankName: string;
   excludeConcepts: string[];
   currentRun: {
     summary: RunSummary | null;
@@ -71,6 +73,7 @@ const initialState: ReconciliationsState = {
     system: {
       issueDateCol: '',
       dueDateCol: '',
+      descriptionCol: '',
       amountMode: 'single',
       amountCol: '',
       debeCol: '',
@@ -79,6 +82,7 @@ const initialState: ReconciliationsState = {
   },
   windowDays: 0,
   cutDate: '',
+  bankName: '',
   excludeConcepts: [],
   currentRun: {
     summary: null,
@@ -176,6 +180,9 @@ const reconciliationsSlice = createSlice({
     setCutDate: (state, action: PayloadAction<string>) => {
       state.cutDate = action.payload;
     },
+    setBankName: (state, action: PayloadAction<string>) => {
+      state.bankName = action.payload;
+    },
     setExcludeConcepts: (state, action: PayloadAction<string[]>) => {
       state.excludeConcepts = action.payload;
     },
@@ -227,6 +234,7 @@ export const {
   updateSystemMapping,
   setWindowDays,
   setCutDate,
+  setBankName,
   setExcludeConcepts,
   setCurrentRunSummary,
   setCurrentRunDetail,

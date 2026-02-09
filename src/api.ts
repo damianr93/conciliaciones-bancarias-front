@@ -48,6 +48,84 @@ export async function apiGetRun(token: string, id: string): Promise<RunDetail> {
   return res.json();
 }
 
+export async function apiUpdateRun(
+  token: string,
+  id: string,
+  data: { status?: 'OPEN' | 'CLOSED'; bankName?: string | null },
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('No se pudo actualizar');
+  return res.json();
+}
+
+export async function apiUpdateSystemData(
+  token: string,
+  runId: string,
+  data: { rows: Record<string, unknown>[]; mapping: RunPayload['system']['mapping'] },
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/system`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rows: data.rows, mapping: data.mapping }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo actualizar el Excel de sistema');
+  }
+  return res.json();
+}
+
+export async function apiAddExcludedConcept(
+  token: string,
+  runId: string,
+  concept: string,
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/exclude-concept`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ concept }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo excluir concepto');
+  }
+  return res.json();
+}
+
+export async function apiSetMatch(
+  token: string,
+  runId: string,
+  systemLineId: string,
+  extractLineIds: string[],
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/match`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ systemLineId, extractLineIds }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo asignar el match');
+  }
+  return res.json();
+}
+
 export async function apiListRuns(token: string): Promise<ReconciliationRun[]> {
   const res = await fetch(`${BASE_URL}/reconciliations`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -185,5 +263,57 @@ export async function apiDeleteRule(token: string, id: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('No se pudo borrar regla');
+  return res.json();
+}
+
+export async function apiCreatePending(
+  token: string,
+  runId: string,
+  data: { area: string; systemLineId: string; note?: string }
+) {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/pending`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('No se pudo crear pendiente');
+  return res.json();
+}
+
+export async function apiResolvePending(
+  token: string,
+  runId: string,
+  pendingId: string,
+  note: string
+) {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/pending/${pendingId}/resolve`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ note }),
+  });
+  if (!res.ok) throw new Error('No se pudo resolver pendiente');
+  return res.json();
+}
+
+export async function apiNotifyPending(
+  token: string,
+  runId: string,
+  data: { areas: string[]; customMessage?: string }
+) {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/notify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('No se pudo enviar notificación');
   return res.json();
 }

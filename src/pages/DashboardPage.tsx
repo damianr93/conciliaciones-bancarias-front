@@ -94,7 +94,11 @@ export function DashboardPage() {
               </TableHeader>
               <TableBody>
                 {runs.map((run) => (
-                  <TableRow key={run.id}>
+                  <TableRow 
+                    key={run.id}
+                    className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                    onClick={() => navigate(`/run/${run.id}`)}
+                  >
                     <TableCell className="font-medium">
                       {run.title || 'Sin título'}
                     </TableCell>
@@ -103,13 +107,16 @@ export function DashboardPage() {
                     </TableCell>
                     <TableCell>{run.bankName || '-'}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">Completada</Badge>
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Completada</Badge>
                     </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/run/${run.id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/run/${run.id}`);
+                        }}
                       >
                         Ver Detalle
                       </Button>

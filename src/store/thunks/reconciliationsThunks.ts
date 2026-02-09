@@ -66,11 +66,12 @@ export const runReconciliationThunk = (token: string) =>
     dispatch(setCurrentRunError(null));
 
     const { reconciliations } = getState();
-    const { extract, system, mapping, windowDays, cutDate, excludeConcepts } = reconciliations;
+    const { extract, system, mapping, windowDays, cutDate, bankName, excludeConcepts } = reconciliations;
 
     try {
       const summary = await apiRunReconciliation(token, {
         title: `Conciliación ${new Date().toLocaleDateString()}`,
+        bankName: bankName || undefined,
         windowDays,
         cutDate: cutDate || undefined,
         extract: {
@@ -88,6 +89,8 @@ export const runReconciliationThunk = (token: string) =>
 
       const detail = await apiGetRun(token, summary.runId);
       dispatch(setCurrentRunDetail(detail));
+      
+      return summary.runId;
     } catch (error: any) {
       const message = error.message || 'Error al conciliar';
       dispatch(setCurrentRunError(message));

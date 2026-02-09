@@ -10,6 +10,7 @@ export type Mapping = {
   system: {
     issueDateCol: string;
     dueDateCol: string;
+    descriptionCol: string;
     amountMode: 'single' | 'debe-haber';
     amountCol: string;
     debeCol: string;
@@ -42,6 +43,8 @@ export type RunSummary = {
   systemDeferred: number;
 };
 
+export type RunStatus = 'OPEN' | 'CLOSED';
+
 export type ReconciliationRun = {
   id: string;
   title?: string | null;
@@ -49,6 +52,7 @@ export type ReconciliationRun = {
   accountRef?: string | null;
   windowDays: number;
   cutDate?: string | null;
+  status?: RunStatus;
   createdAt: string;
   createdById: string;
 };
@@ -78,6 +82,7 @@ export type ExtractLine = {
   date: string | null;
   concept: string | null;
   amount: number;
+  excluded?: boolean;
   category?: { name: string } | null;
 };
 
@@ -86,6 +91,7 @@ export type SystemLine = {
   issueDate: string | null;
   dueDate: string | null;
   amount: number;
+  description?: string | null;
 };
 
 export type Match = {
@@ -103,9 +109,22 @@ export type UnmatchedSystem = {
   status: 'OVERDUE' | 'DEFERRED';
 };
 
+export type PendingItem = {
+  id: string;
+  area: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+  resolvedAt?: string | null;
+  note?: string | null;
+  systemLineId?: string | null;
+  systemLine?: SystemLine;
+};
+
 export type RunDetail = {
   id: string;
   title?: string;
+  bankName?: string;
+  status?: RunStatus;
+  excludeConcepts?: string[];
   createdAt: string;
   extractLines: ExtractLine[];
   systemLines: SystemLine[];
@@ -113,4 +132,10 @@ export type RunDetail = {
   unmatchedExtract: UnmatchedExtract[];
   unmatchedSystem: UnmatchedSystem[];
   messages: Message[];
+  members: Array<{
+    id: string;
+    role: string;
+    user: { email: string };
+  }>;
+  pendingItems?: PendingItem[];
 };

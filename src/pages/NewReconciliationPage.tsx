@@ -13,6 +13,7 @@ import {
   updateSystemMapping,
   setWindowDays,
   setCutDate,
+  setBankName,
   setExcludeConcepts,
   resetReconciliation,
 } from '@/store/slices/reconciliationsSlice';
@@ -32,7 +33,7 @@ export function NewReconciliationPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const token = useAppSelector((state) => state.auth.token);
-  const { extract, system, mapping, windowDays, cutDate, excludeConcepts, currentRun } = 
+  const { extract, system, mapping, windowDays, cutDate, bankName, excludeConcepts, currentRun } = 
     useAppSelector((state) => state.reconciliations);
 
   useEffect(() => {
@@ -66,10 +67,10 @@ export function NewReconciliationPage() {
   const handleRun = async () => {
     if (!token) return;
     try {
-      await dispatch(runReconciliationThunk(token));
+      const runId = await dispatch(runReconciliationThunk(token));
       toast.success('Conciliación completada exitosamente');
-      if (currentRun.summary) {
-        navigate(`/run/${currentRun.summary.runId}`);
+      if (runId) {
+        navigate(`/run/${runId}`);
       }
     } catch (err) {
       toast.error('Error al ejecutar la conciliación');
@@ -95,9 +96,9 @@ export function NewReconciliationPage() {
         <p className="text-muted-foreground">Cargá los archivos y configurá el proceso de conciliación</p>
       </div>
 
-      <Card>
+      <Card className="border-l-4 border-l-blue-500">
         <CardHeader>
-          <CardTitle>1. Cargar Extracto Bancario</CardTitle>
+          <CardTitle className="text-blue-700 dark:text-blue-400">1. Cargar Extracto Bancario</CardTitle>
           <CardDescription>Archivo Excel o CSV del extracto bancario</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,9 +167,9 @@ export function NewReconciliationPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-l-4 border-l-purple-500">
         <CardHeader>
-          <CardTitle>2. Cargar Sistema</CardTitle>
+          <CardTitle className="text-purple-700 dark:text-purple-400">2. Cargar Sistema</CardTitle>
           <CardDescription>Archivo Excel o CSV del sistema interno</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -237,9 +238,9 @@ export function NewReconciliationPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-l-4 border-l-indigo-500">
         <CardHeader>
-          <CardTitle>3. Mapeo de Columnas</CardTitle>
+          <CardTitle className="text-indigo-700 dark:text-indigo-400">3. Mapeo de Columnas</CardTitle>
           <CardDescription>Selecciona las columnas correspondientes de cada archivo</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -352,6 +353,18 @@ export function NewReconciliationPage() {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Descripción</Label>
+                <Select
+                  value={mapping.system.descriptionCol}
+                  onChange={(e) => dispatch(updateSystemMapping({ descriptionCol: e.target.value }))}
+                >
+                  <option value="">Seleccionar (opcional)</option>
+                  {system.columns.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Modo Importe</Label>
                 <Select
                   value={mapping.system.amountMode}
@@ -409,12 +422,37 @@ export function NewReconciliationPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-l-4 border-l-green-500">
         <CardHeader>
-          <CardTitle>4. Parámetros de Conciliación</CardTitle>
+          <CardTitle className="text-green-700 dark:text-green-400">4. Parámetros de Conciliación</CardTitle>
           <CardDescription>Configura las opciones de conciliación</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Banco</Label>
+            <Select
+              value={['Banco Nación','Banco Galicia','Banco Santander','Banco Provincia','Banco ICBC'].includes(bankName) ? bankName : (bankName ? 'Otro' : '')}
+              onChange={(e) => {
+                const v = e.target.value;
+                dispatch(setBankName(v === 'Otro' ? 'Otro' : v));
+              }}
+            >
+              <option value="">Seleccionar banco</option>
+              <option value="Banco Nación">Banco Nación</option>
+              <option value="Banco Galicia">Banco Galicia</option>
+              <option value="Banco Santander">Banco Santander</option>
+              <option value="Banco Provincia">Banco Provincia</option>
+              <option value="Banco ICBC">Banco ICBC</option>
+              <option value="Otro">Otro</option>
+            </Select>
+            {!['Banco Nación','Banco Galicia','Banco Santander','Banco Provincia','Banco ICBC'].includes(bankName) && (
+              <Input
+                placeholder="Nombre del banco"
+                value={bankName === 'Otro' ? '' : bankName}
+                onChange={(e) => dispatch(setBankName(e.target.value.trim() || 'Otro'))}
+              />
+            )}
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Ventana de días</Label>

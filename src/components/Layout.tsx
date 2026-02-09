@@ -1,8 +1,9 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { LogOut, Home, FolderOpen, Tags } from 'lucide-react';
+import { LogOut, Home, Tags } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
 import { Button } from './ui/Button';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Layout() {
   const dispatch = useAppDispatch();
@@ -39,8 +40,9 @@ export function Layout() {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Salir

@@ -92,15 +92,40 @@ export function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="space-y-2">
         <h1 className="text-3xl font-bold">Categorías de Gastos</h1>
-        <p className="text-muted-foreground">Gestiona las categorías y reglas de clasificación automática</p>
+        <p className="text-muted-foreground">
+          Las categorías clasifican automáticamente los gastos de tu extracto bancario
+        </p>
       </div>
 
+      <Card className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+        <CardHeader>
+          <CardTitle className="text-lg text-blue-700 dark:text-blue-400">💡 ¿Para qué sirven las Categorías?</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p>
+            <strong>Clasificación automática:</strong> Cuando hacés una conciliación, el sistema analiza cada 
+            concepto del extracto y lo clasifica automáticamente según las reglas que definís aquí.
+          </p>
+          <div className="space-y-1">
+            <p><strong>Ejemplo práctico:</strong></p>
+            <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
+              <li>Concepto: "COMISION MANTENIMIENTO" → se clasifica como "Comisiones bancarias"</li>
+              <li>Concepto: "IMPUESTO DEBITO" → se clasifica como "Impuesto a los débitos"</li>
+            </ul>
+          </div>
+          <p>
+            <strong>Beneficio:</strong> En el reporte final (y el Excel exportado) vas a ver cada movimiento 
+            con su categoría asignada, listo para análisis contable sin clasificar manualmente.
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader>
-            <CardTitle>Nueva Categoría</CardTitle>
+            <CardTitle className="text-purple-700 dark:text-purple-400">Nueva Categoría</CardTitle>
             <CardDescription>Crea una nueva categoría de gastos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -119,9 +144,9 @@ export function CategoriesPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500">
           <CardHeader>
-            <CardTitle>Nueva Regla</CardTitle>
+            <CardTitle className="text-indigo-700 dark:text-indigo-400">Nueva Regla</CardTitle>
             <CardDescription>Agrega una regla de clasificación automática</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
