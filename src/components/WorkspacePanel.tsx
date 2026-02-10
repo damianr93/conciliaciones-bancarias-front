@@ -245,12 +245,138 @@ export function WorkspacePanel({
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground rounded-md border border-border bg-muted/30 dark:bg-muted/20 p-3">
-          <strong>Qué son estos movimientos:</strong> Son los que están en un archivo pero no en el otro (no hicieron match). 
-          <strong> Vencidos</strong> = del sistema y ya pasó la fecha de vencimiento (requieren seguimiento). 
-          <strong> Diferidos</strong> = del sistema con fecha futura (pueden aparecer en el próximo extracto). 
-          <strong> Solo en extracto</strong> = están en el banco pero no en el sistema (a revisar).
-        </p>
+        <CollapsibleSection
+          title="Vista por archivo (Sistema / Extracto) — colores por estado"
+          defaultOpen={true}
+          maxHeight="50vh"
+        >
+          <div className="p-2 space-y-2">
+            <div className="flex gap-2">
+              <Button
+                variant={activeTab === TAB_SISTEMA ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab(TAB_SISTEMA)}
+              >
+                <FileSpreadsheet className="mr-1 h-4 w-4" />
+                Sistema
+              </Button>
+              <Button
+                variant={activeTab === TAB_EXTRACTO ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab(TAB_EXTRACTO)}
+              >
+                <Link2 className="mr-1 h-4 w-4" />
+                Extracto
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Verde = conciliado, Rojo = vencido, Amarillo = diferido, Azul = solo en extracto. Pasá el mouse sobre conciliados para ver el match.
+            </p>
+
+            {activeTab === TAB_SISTEMA && (
+              <div className="overflow-auto">
+                <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Emisión</TableHead>
+                    <TableHead>Venc.</TableHead>
+                    <TableHead>Importe</TableHead>
+                    <TableHead>Estado</TableHead>
+                    {runId && token && <TableHead></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {systemLines.map((sys) => {
+                    const isMatched = systemToExtracts.has(sys.id);
+                    const un = unmatchedSystem.find((u) => u.systemLineId === sys.id);
+                    const rowClass = isMatched
+                      ? 'bg-green-100 dark:bg-green-900/50'
+                      : un?.status === 'OVERDUE'
+                        ? 'bg-red-100 dark:bg-red-900/50'
+                        : 'bg-yellow-100 dark:bg-yellow-900/50';
+                    const extractIds = systemToExtracts.get(sys.id) || [];
+                    const tooltip = extractIds.length
+                      ? extractIds
+                          .map((eid) => {
+                            const e = extractById.get(eid);
+                            return e
+                              ? `${e.date ? new Date(e.date).toLocaleDateString() : ''} ${e.concept || ''} $${e.amount.toFixed(2)}`
+                              : '';
+                          })
+                          .filter(Boolean)
+                          .join(' | ')
+                      : '';
+                    return (
+                      <TableRow key={sys.id} className={rowClass} title={tooltip || undefined}>
+                        <TableCell className="max-w-[200px] truncate">{sys.description || '-'}</TableCell>
+                        <TableCell>{sys.issueDate ? new Date(sys.issueDate).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell>{sys.dueDate ? new Date(sys.dueDate).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell>${sys.amount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {isMatched ? 'Correcto' : un?.status === 'OVERDUE' ? 'Vencido' : 'Diferido'}
+                        </TableCell>
+                        {runId && token && (
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setChangeMatchSystem(sys)}
+                            >
+                              Cambiar match
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              </div>
+            )}
+
+            {activeTab === TAB_EXTRACTO && (
+              <div className="overflow-auto">
+                <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Concepto</TableHead>
+                    <TableHead>Importe</TableHead>
+                    <TableHead>Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {extractLines.map((ext) => {
+                    const isMatched = extractToSystems.has(ext.id);
+                    const rowClass = isMatched
+                      ? 'bg-green-100 dark:bg-green-900/50'
+                      : 'bg-blue-100 dark:bg-blue-900/50';
+                    const systemIds = extractToSystems.get(ext.id) || [];
+                    const tooltip = systemIds.length
+                      ? systemIds
+                          .map((sid) => {
+                            const s = systemById.get(sid);
+                            return s ? `${s.description || ''} $${s.amount.toFixed(2)}` : '';
+                          })
+                          .filter(Boolean)
+                          .join(' | ')
+                      : '';
+                    return (
+                      <TableRow key={ext.id} className={rowClass} title={tooltip || undefined}>
+                        <TableCell>{ext.date ? new Date(ext.date).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{ext.concept || '-'}</TableCell>
+                        <TableCell>${ext.amount.toFixed(2)}</TableCell>
+                        <TableCell>{isMatched ? 'Correcto' : 'Solo extracto'}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
 
         {onAddExcludedConcept && (
           <CollapsibleSection
@@ -436,140 +562,6 @@ export function WorkspacePanel({
             </Table>
           </CollapsibleSection>
         )}
-
-        <CollapsibleSection
-          title="Vista por archivo (Sistema / Extracto) — colores por estado"
-          defaultOpen={false}
-          maxHeight="50vh"
-          className="mt-4"
-        >
-          <div className="p-2 space-y-2">
-            <div className="flex gap-2">
-              <Button
-                variant={activeTab === TAB_SISTEMA ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab(TAB_SISTEMA)}
-              >
-                <FileSpreadsheet className="mr-1 h-4 w-4" />
-                Sistema
-              </Button>
-              <Button
-                variant={activeTab === TAB_EXTRACTO ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab(TAB_EXTRACTO)}
-              >
-                <Link2 className="mr-1 h-4 w-4" />
-                Extracto
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Verde = conciliado, Rojo = vencido, Amarillo = diferido, Azul = solo en extracto. Pasá el mouse sobre conciliados para ver el match.
-            </p>
-
-            {activeTab === TAB_SISTEMA && (
-              <div className="overflow-auto">
-                <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Emisión</TableHead>
-                    <TableHead>Venc.</TableHead>
-                    <TableHead>Importe</TableHead>
-                    <TableHead>Estado</TableHead>
-                    {runId && token && <TableHead></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {systemLines.map((sys) => {
-                    const isMatched = systemToExtracts.has(sys.id);
-                    const un = unmatchedSystem.find((u) => u.systemLineId === sys.id);
-                    const rowClass = isMatched
-                      ? 'bg-green-100 dark:bg-green-900/50'
-                      : un?.status === 'OVERDUE'
-                        ? 'bg-red-100 dark:bg-red-900/50'
-                        : 'bg-yellow-100 dark:bg-yellow-900/50';
-                    const extractIds = systemToExtracts.get(sys.id) || [];
-                    const tooltip = extractIds.length
-                      ? extractIds
-                          .map((eid) => {
-                            const e = extractById.get(eid);
-                            return e
-                              ? `${e.date ? new Date(e.date).toLocaleDateString() : ''} ${e.concept || ''} $${e.amount.toFixed(2)}`
-                              : '';
-                          })
-                          .filter(Boolean)
-                          .join(' | ')
-                      : '';
-                    return (
-                      <TableRow key={sys.id} className={rowClass} title={tooltip || undefined}>
-                        <TableCell className="max-w-[200px] truncate">{sys.description || '-'}</TableCell>
-                        <TableCell>{sys.issueDate ? new Date(sys.issueDate).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell>{sys.dueDate ? new Date(sys.dueDate).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell>${sys.amount.toFixed(2)}</TableCell>
-                        <TableCell>
-                          {isMatched ? 'Correcto' : un?.status === 'OVERDUE' ? 'Vencido' : 'Diferido'}
-                        </TableCell>
-                        {runId && token && (
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setChangeMatchSystem(sys)}
-                            >
-                              Cambiar match
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              </div>
-            )}
-
-            {activeTab === TAB_EXTRACTO && (
-              <div className="overflow-auto">
-                <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Concepto</TableHead>
-                    <TableHead>Importe</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {extractLines.map((ext) => {
-                    const isMatched = extractToSystems.has(ext.id);
-                    const rowClass = isMatched
-                      ? 'bg-green-100 dark:bg-green-900/50'
-                      : 'bg-blue-100 dark:bg-blue-900/50';
-                    const systemIds = extractToSystems.get(ext.id) || [];
-                    const tooltip = systemIds.length
-                      ? systemIds
-                          .map((sid) => {
-                            const s = systemById.get(sid);
-                            return s ? `${s.description || ''} $${s.amount.toFixed(2)}` : '';
-                          })
-                          .filter(Boolean)
-                          .join(' | ')
-                      : '';
-                    return (
-                      <TableRow key={ext.id} className={rowClass} title={tooltip || undefined}>
-                        <TableCell>{ext.date ? new Date(ext.date).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{ext.concept || '-'}</TableCell>
-                        <TableCell>${ext.amount.toFixed(2)}</TableCell>
-                        <TableCell>{isMatched ? 'Correcto' : 'Solo extracto'}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
       </CardContent>
     </Card>
 
