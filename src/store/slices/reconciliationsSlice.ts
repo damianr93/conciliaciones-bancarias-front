@@ -58,9 +58,24 @@ const defaultFileState: FileState = {
   error: null,
 };
 
+const defaultSystemFileState: FileState = {
+  ...defaultFileState,
+  headerRow: 6,
+};
+
+const defaultSystemMapping: ReconciliationsState['mapping']['system'] = {
+  issueDateCol: 'Emisión',
+  dueDateCol: 'Vencim.',
+  descriptionCol: 'Comentario',
+  amountMode: 'debe-haber',
+  amountCol: '',
+  debeCol: 'Debe',
+  haberCol: 'Haber',
+};
+
 const initialState: ReconciliationsState = {
   extract: defaultFileState,
-  system: defaultFileState,
+  system: defaultSystemFileState,
   mapping: {
     extract: {
       dateCol: '',
@@ -70,15 +85,7 @@ const initialState: ReconciliationsState = {
       debeCol: '',
       haberCol: '',
     },
-    system: {
-      issueDateCol: '',
-      dueDateCol: '',
-      descriptionCol: '',
-      amountMode: 'single',
-      amountCol: '',
-      debeCol: '',
-      haberCol: '',
-    },
+    system: defaultSystemMapping,
   },
   windowDays: 0,
   cutDate: '',

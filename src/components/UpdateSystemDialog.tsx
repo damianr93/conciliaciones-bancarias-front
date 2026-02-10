@@ -16,13 +16,13 @@ interface UpdateSystemDialogProps {
 }
 
 const defaultMapping: Mapping['system'] = {
-  issueDateCol: '',
-  dueDateCol: '',
-  descriptionCol: '',
-  amountMode: 'single',
+  issueDateCol: 'Emisión',
+  dueDateCol: 'Vencim.',
+  descriptionCol: 'Comentario',
+  amountMode: 'debe-haber',
   amountCol: '',
-  debeCol: '',
-  haberCol: '',
+  debeCol: 'Debe',
+  haberCol: 'Haber',
 };
 
 export function UpdateSystemDialog({
@@ -37,7 +37,7 @@ export function UpdateSystemDialog({
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState('');
-  const [headerRow, setHeaderRow] = useState(1);
+  const [headerRow, setHeaderRow] = useState(6);
   const [mapping, setMapping] = useState<Mapping['system']>(defaultMapping);
   const [loading, setLoading] = useState(false);
   const [parseLoading, setParseLoading] = useState(false);
@@ -50,12 +50,12 @@ export function UpdateSystemDialog({
     setParseLoading(true);
     setError(null);
     try {
-      const result = await apiParseFile(token, f, undefined, 1);
+      const result = await apiParseFile(token, f, undefined, 6);
       setSheets(result.sheets);
       setRows(result.rows);
       setColumns(result.rows.length ? Object.keys(result.rows[0] as object) : []);
       setSelectedSheet(result.sheets[0] || '');
-      setHeaderRow(1);
+      setHeaderRow(6);
     } catch (err: any) {
       setError(err.message || 'Error al leer archivo');
     } finally {
