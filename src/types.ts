@@ -124,6 +124,7 @@ export type RunDetail = {
   title?: string;
   bankName?: string;
   status?: RunStatus;
+  createdById?: string;
   excludeConcepts?: string[];
   createdAt: string;
   extractLines: ExtractLine[];

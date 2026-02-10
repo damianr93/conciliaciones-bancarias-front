@@ -23,7 +23,10 @@ export function RunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const token = useAppSelector((state) => state.auth.token);
+  const user = useAppSelector((state) => state.auth.user);
   const { detail, isLoading } = useAppSelector((state) => state.reconciliations.currentRun);
+  const isClosed = detail?.status === 'CLOSED';
+  const isCreator = detail?.createdById != null && user?.id != null && detail.createdById === user.id;
 
   const [shareEmail, setShareEmail] = useState('');
   const [shareRole, setShareRole] = useState<'EDITOR' | 'VIEWER'>('EDITOR');
@@ -211,7 +214,7 @@ export function RunDetailPage() {
           <p className="text-muted-foreground flex items-center gap-2 flex-wrap">
             <span>{new Date(detail.createdAt).toLocaleDateString()}</span>
             <span>—</span>
-            {showWorkspace ? (
+            {!isClosed && showWorkspace ? (
               <>
                 <Label className="text-muted-foreground font-normal">Banco:</Label>
                 <Select
@@ -231,30 +234,45 @@ export function RunDetailPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleToggleStatus}
-            disabled={updatingStatus}
-          >
-            {detail.status === 'CLOSED' ? 'Reabrir' : 'Cerrar'} conciliación
-          </Button>
-          <Button 
-            variant={showWorkspace ? "default" : "outline"}
-            onClick={() => setShowWorkspace(!showWorkspace)}
-          >
-            <Briefcase className="mr-2 h-4 w-4" />
-            {showWorkspace ? 'Ver Detalle' : 'Espacio de Trabajo'}
-          </Button>
-          {!showWorkspace && pendingItems.filter(p => p.status !== 'RESOLVED').length > 0 && (
+          {!isClosed && (
+            <Button
+              variant="outline"
+              onClick={handleToggleStatus}
+              disabled={updatingStatus}
+            >
+              Cerrar conciliación
+            </Button>
+          )}
+          {isClosed && isCreator && (
+            <Button
+              variant="outline"
+              onClick={handleToggleStatus}
+              disabled={updatingStatus}
+            >
+              Reabrir conciliación
+            </Button>
+          )}
+          {!isClosed && (
+            <Button 
+              variant={showWorkspace ? "default" : "outline"}
+              onClick={() => setShowWorkspace(!showWorkspace)}
+            >
+              <Briefcase className="mr-2 h-4 w-4" />
+              {showWorkspace ? 'Ver Detalle' : 'Espacio de Trabajo'}
+            </Button>
+          )}
+          {!isClosed && !showWorkspace && pendingItems.filter(p => p.status !== 'RESOLVED').length > 0 && (
             <Button variant="outline" onClick={() => setNotifyDialogOpen(true)}>
               <Send className="mr-2 h-4 w-4" />
               Notificar Pendientes
             </Button>
           )}
-          <Button variant="outline" onClick={() => setUpdateSystemDialogOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Actualizar Excel sistema
-          </Button>
+          {!isClosed && (
+            <Button variant="outline" onClick={() => setUpdateSystemDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Actualizar Excel sistema
+            </Button>
+          )}
           <Button onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Descargar Excel
@@ -262,7 +280,7 @@ export function RunDetailPage() {
         </div>
       </div>
 
-      {showWorkspace && (
+      {!isClosed && showWorkspace && (
         <WorkspacePanel
           matches={detail.matches}
           unmatchedSystem={detail.unmatchedSystem}
@@ -290,7 +308,7 @@ export function RunDetailPage() {
         />
       )}
 
-      {!showWorkspace && (
+      {(isClosed || !showWorkspace) && (
         <>
       <div className="grid gap-4 md:grid-cols-5">
         <Card className="border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950/20">
@@ -383,14 +401,16 @@ export function RunDetailPage() {
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate">{pending.note || '-'}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResolvePending(pending.id)}
-                          >
-                            <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Resolver
-                          </Button>
+                          {!isClosed && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResolvePending(pending.id)}
+                            >
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Resolver
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -618,28 +638,32 @@ export function RunDetailPage() {
 
       <CollapsibleSection title="Colaboración" defaultOpen={false} maxHeight="50vh">
         <div className="p-4 space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2 md:col-span-2">
-              <Label>Email del usuario</Label>
-              <Input
-                type="email"
-                value={shareEmail}
-                onChange={(e) => setShareEmail(e.target.value)}
-                placeholder="usuario@ejemplo.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Rol</Label>
-              <Select value={shareRole} onChange={(e) => setShareRole(e.target.value as any)}>
-                <option value="EDITOR">Editor</option>
-                <option value="VIEWER">Viewer</option>
-              </Select>
-            </div>
-          </div>
-          <Button onClick={handleShare} disabled={!shareEmail.trim()}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Compartir
-          </Button>
+          {!isClosed && (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Email del usuario</Label>
+                  <Input
+                    type="email"
+                    value={shareEmail}
+                    onChange={(e) => setShareEmail(e.target.value)}
+                    placeholder="usuario@ejemplo.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Rol</Label>
+                  <Select value={shareRole} onChange={(e) => setShareRole(e.target.value as any)}>
+                    <option value="EDITOR">Editor</option>
+                    <option value="VIEWER">Viewer</option>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={handleShare} disabled={!shareEmail.trim()}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Compartir
+              </Button>
+            </>
+          )}
 
           {detail.members.length > 0 && (
             <div className="space-y-2">
@@ -674,18 +698,20 @@ export function RunDetailPage() {
               ))}
             </div>
           )}
-          <div className="space-y-2">
-            <textarea
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={messageBody}
-              onChange={(e) => setMessageBody(e.target.value)}
-              placeholder="Escribe un mensaje..."
-            />
-            <Button onClick={handleMessage} disabled={!messageBody.trim()}>
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Enviar Mensaje
-            </Button>
-          </div>
+          {!isClosed && (
+            <div className="space-y-2">
+              <textarea
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={messageBody}
+                onChange={(e) => setMessageBody(e.target.value)}
+                placeholder="Escribe un mensaje..."
+              />
+              <Button onClick={handleMessage} disabled={!messageBody.trim()}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Enviar Mensaje
+              </Button>
+            </div>
+          )}
         </div>
       </CollapsibleSection>
 

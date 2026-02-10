@@ -134,6 +134,17 @@ export async function apiListRuns(token: string): Promise<ReconciliationRun[]> {
   return res.json();
 }
 
+export async function apiDeleteRun(token: string, id: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo borrar');
+  }
+}
+
 export async function apiExportRun(token: string, id: string) {
   const res = await fetch(`${BASE_URL}/reconciliations/${id}/export`, {
     headers: { Authorization: `Bearer ${token}` },

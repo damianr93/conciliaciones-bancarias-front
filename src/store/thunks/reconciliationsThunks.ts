@@ -17,6 +17,7 @@ import {
   apiRunReconciliation,
   apiGetRun,
   apiListRuns,
+  apiDeleteRun,
   apiExportRun,
   apiShareRun,
   apiAddMessage,
@@ -123,6 +124,13 @@ export const fetchRunsThunk = (token: string) =>
       console.error('Error al cargar conciliaciones:', error);
       throw error;
     }
+  };
+
+export const deleteRunThunk = (token: string, runId: string) =>
+  async (dispatch: AppDispatch) => {
+    await apiDeleteRun(token, runId);
+    const runs = await apiListRuns(token);
+    dispatch(setRuns(runs));
   };
 
 export const exportRunThunk = (token: string, runId: string) =>

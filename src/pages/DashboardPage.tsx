@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchRunsThunk } from '@/store/thunks/reconciliationsThunks';
+import { fetchRunsThunk, deleteRunThunk } from '@/store/thunks/reconciliationsThunks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -107,9 +108,11 @@ export function DashboardPage() {
                     </TableCell>
                     <TableCell>{run.bankName || '-'}</TableCell>
                     <TableCell>
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Completada</Badge>
+                      <Badge className={run.status === 'CLOSED' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'}>
+                        {run.status === 'CLOSED' ? 'Cerrada' : 'Abierta'}
+                      </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -120,6 +123,25 @@ export function DashboardPage() {
                       >
                         Ver Detalle
                       </Button>
+                      {run.status === 'OPEN' && token && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm('¿Borrar esta conciliación? No se puede deshacer.')) return;
+                            try {
+                              await dispatch(deleteRunThunk(token, run.id));
+                              toast.success('Conciliación borrada');
+                            } catch (err: any) {
+                              toast.error(err?.message ?? 'Error al borrar');
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
