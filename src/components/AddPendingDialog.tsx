@@ -14,7 +14,7 @@ interface AddPendingDialogProps {
   onSubmit: (area: string, note: string) => Promise<void>;
 }
 
-const AREAS = ['Dirección', 'Pagos', 'Administración', 'Logística'];
+const AREAS = ['Dirección', 'Tesorería'];
 
 export function AddPendingDialog({ open, onClose, onSubmit }: AddPendingDialogProps) {
   const [area, setArea] = useState(AREAS[0]);

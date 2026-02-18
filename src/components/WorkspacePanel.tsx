@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { Check, Send, Link2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
@@ -19,14 +19,15 @@ interface WorkspacePanelProps {
   extractById: Map<string, ExtractLine>;
   excludeConcepts?: string[];
   onAddExcludedConcept?: (concept: string) => Promise<void>;
-  onSave: (items: Array<{ systemLineId: string; area: string; status: 'OVERDUE' | 'DEFERRED' }>) => Promise<void>;
-  onFinalize: () => void;
+  onSave?: (items: Array<{ systemLineId: string; area: string; status: 'OVERDUE' | 'DEFERRED' }>) => Promise<void>;
+  onFinalize?: () => void;
   onChangeMatchSuccess?: () => void;
   runId?: string;
   token?: string;
+  pendingAreaBySystemLineId?: Map<string, string>;
 }
 
-const AREAS = ['Dirección', 'Pagos', 'Administración', 'Logística'];
+const AREAS = ['Dirección', 'Tesorería'];
 
 const TAB_SISTEMA = 'sistema';
 const TAB_EXTRACTO = 'extracto';
@@ -46,6 +47,7 @@ export function WorkspacePanel({
   onChangeMatchSuccess,
   runId,
   token,
+  pendingAreaBySystemLineId,
 }: WorkspacePanelProps) {
   const [workItems, setWorkItems] = useState<Map<string, { area: string; status: 'OVERDUE' | 'DEFERRED' }>>(new Map());
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -55,6 +57,32 @@ export function WorkspacePanel({
   const [changeMatchSystem, setChangeMatchSystem] = useState<SystemLine | null>(null);
   const [newExcludedConcept, setNewExcludedConcept] = useState('');
   const [addingExcluded, setAddingExcluded] = useState(false);
+  const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null);
+  const [expandedExtractId, setExpandedExtractId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setWorkItems((prev) => {
+      const next = new Map(prev);
+      let changed = false;
+      const pendingArea = pendingAreaBySystemLineId ?? new Map<string, string>();
+      for (const u of unmatchedSystem) {
+        const id = u.systemLineId;
+        const status = (u.status === 'OVERDUE' || u.status === 'DEFERRED') ? u.status : 'DEFERRED';
+        if (!next.has(id)) {
+          next.set(id, { area: pendingArea.get(id) ?? '', status });
+          changed = true;
+        } else {
+          const current = next.get(id)!;
+          const areaFromBackend = pendingArea.get(id) ?? '';
+          if (current.area === '' && areaFromBackend !== '') {
+            next.set(id, { ...current, area: areaFromBackend });
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [unmatchedSystem, pendingAreaBySystemLineId]);
 
   const uniqueConcepts = useMemo(() => {
     const set = new Set<string>();
@@ -169,6 +197,7 @@ export function WorkspacePanel({
       toast.error('No hay movimientos con área asignada');
       return;
     }
+    if (!onSave) return;
 
     setIsSaving(true);
     try {
@@ -202,23 +231,25 @@ export function WorkspacePanel({
               Movimientos sin match: asigná áreas a los del sistema (vencidos/diferidos) y revisá los solo en extracto
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSave}
-              disabled={isSaving || pendingCount === 0}
-            >
-              <Check className="mr-2 h-4 w-4" />
-              Guardar Cambios ({pendingCount})
-            </Button>
-            <Button
-              onClick={onFinalize}
-              disabled={pendingCount === 0}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Finalizar y Notificar
-            </Button>
-          </div>
+          {onSave != null && onFinalize != null && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                disabled={isSaving || pendingCount === 0}
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Guardar Cambios ({pendingCount})
+              </Button>
+              <Button
+                onClick={onFinalize}
+                disabled={pendingCount === 0}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Finalizar y Notificar
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -270,7 +301,7 @@ export function WorkspacePanel({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Verde = conciliado, Rojo = vencido, Amarillo = diferido, Azul = solo en extracto. Pasá el mouse sobre conciliados para ver el match.
+              Verde = conciliado, Rojo = vencido, Amarillo = diferido, Azul = solo en extracto. Click en la fila para ver el match.
             </p>
 
             {activeTab === TAB_SISTEMA && (
@@ -296,38 +327,51 @@ export function WorkspacePanel({
                         ? 'bg-red-100 dark:bg-red-900/50'
                         : 'bg-yellow-100 dark:bg-yellow-900/50';
                     const extractIds = systemToExtracts.get(sys.id) || [];
-                    const tooltip = extractIds.length
-                      ? extractIds
-                          .map((eid) => {
-                            const e = extractById.get(eid);
-                            return e
-                              ? `${e.date ? new Date(e.date).toLocaleDateString() : ''} ${e.concept || ''} $${e.amount.toFixed(2)}`
-                              : '';
-                          })
-                          .filter(Boolean)
-                          .join(' | ')
-                      : '';
+                    const isExpanded = expandedSystemId === sys.id;
                     return (
-                      <TableRow key={sys.id} className={rowClass} title={tooltip || undefined}>
-                        <TableCell className="max-w-[200px] truncate">{sys.description || '-'}</TableCell>
-                        <TableCell>{sys.issueDate ? new Date(sys.issueDate).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell>{sys.dueDate ? new Date(sys.dueDate).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell>${sys.amount.toFixed(2)}</TableCell>
-                        <TableCell>
-                          {isMatched ? 'Correcto' : un?.status === 'OVERDUE' ? 'Vencido' : 'Diferido'}
-                        </TableCell>
-                        {runId && token && (
+                      <Fragment key={sys.id}>
+                        <TableRow
+                          key={sys.id}
+                          className={`${rowClass} cursor-pointer`}
+                          onClick={() => setExpandedSystemId(isExpanded ? null : sys.id)}
+                        >
+                          <TableCell className="max-w-[200px] truncate">{sys.description || '-'}</TableCell>
+                          <TableCell>{sys.issueDate ? new Date(sys.issueDate).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell>{sys.dueDate ? new Date(sys.dueDate).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell>${sys.amount.toFixed(2)}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setChangeMatchSystem(sys)}
-                            >
-                              Cambiar match
-                            </Button>
+                            {isMatched ? 'Correcto' : un?.status === 'OVERDUE' ? 'Vencido' : 'Diferido'}
                           </TableCell>
+                          {runId && token && (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setChangeMatchSystem(sys)}
+                              >
+                                Cambiar match
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                        {isExpanded && extractIds.length > 0 && (
+                          <TableRow key={`${sys.id}-exp`} className="bg-muted/50">
+                            <TableCell colSpan={runId && token ? 6 : 5} className="py-2">
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Match con extracto:</p>
+                              <ul className="space-y-1 text-sm">
+                                {extractIds.map((eid) => {
+                                  const e = extractById.get(eid);
+                                  return e ? (
+                                    <li key={eid}>
+                                      {e.date ? new Date(e.date).toLocaleDateString() : '-'} — {e.concept || '-'} — ${e.amount.toFixed(2)}
+                                    </li>
+                                  ) : null;
+                                })}
+                              </ul>
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableRow>
+                      </Fragment>
                     );
                   })}
                 </TableBody>
@@ -353,22 +397,37 @@ export function WorkspacePanel({
                       ? 'bg-green-100 dark:bg-green-900/50'
                       : 'bg-blue-100 dark:bg-blue-900/50';
                     const systemIds = extractToSystems.get(ext.id) || [];
-                    const tooltip = systemIds.length
-                      ? systemIds
-                          .map((sid) => {
-                            const s = systemById.get(sid);
-                            return s ? `${s.description || ''} $${s.amount.toFixed(2)}` : '';
-                          })
-                          .filter(Boolean)
-                          .join(' | ')
-                      : '';
+                    const isExpanded = expandedExtractId === ext.id;
                     return (
-                      <TableRow key={ext.id} className={rowClass} title={tooltip || undefined}>
-                        <TableCell>{ext.date ? new Date(ext.date).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{ext.concept || '-'}</TableCell>
-                        <TableCell>${ext.amount.toFixed(2)}</TableCell>
-                        <TableCell>{isMatched ? 'Correcto' : 'Solo extracto'}</TableCell>
-                      </TableRow>
+                      <Fragment key={ext.id}>
+                        <TableRow
+                          key={ext.id}
+                          className={`${rowClass} cursor-pointer`}
+                          onClick={() => setExpandedExtractId(isExpanded ? null : ext.id)}
+                        >
+                          <TableCell>{ext.date ? new Date(ext.date).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{ext.concept || '-'}</TableCell>
+                          <TableCell>${ext.amount.toFixed(2)}</TableCell>
+                          <TableCell>{isMatched ? 'Correcto' : 'Solo extracto'}</TableCell>
+                        </TableRow>
+                        {isExpanded && systemIds.length > 0 && (
+                          <TableRow key={`${ext.id}-exp`} className="bg-muted/50">
+                            <TableCell colSpan={4} className="py-2">
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Match con sistema:</p>
+                              <ul className="space-y-1 text-sm">
+                                {systemIds.map((sid) => {
+                                  const s = systemById.get(sid);
+                                  return s ? (
+                                    <li key={sid}>
+                                      {s.description || '-'} — ${s.amount.toFixed(2)}
+                                    </li>
+                                  ) : null;
+                                })}
+                              </ul>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </TableBody>
@@ -432,7 +491,7 @@ export function WorkspacePanel({
           </CollapsibleSection>
         )}
 
-        {selectedItems.size > 0 && (
+        {onSave != null && selectedItems.size > 0 && (
           <div className="flex gap-2 items-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <span className="text-sm font-medium">
               {selectedItems.size} seleccionado(s)
@@ -466,6 +525,7 @@ export function WorkspacePanel({
                     type="checkbox"
                     checked={selectedItems.size === allIncorrect.length && allIncorrect.length > 0}
                     onChange={handleToggleAll}
+                    disabled={!onSave}
                     className="h-4 w-4 rounded border-input"
                   />
                 </TableHead>
@@ -482,7 +542,8 @@ export function WorkspacePanel({
                 const sys = item.systemLine;
                 if (!sys) return null;
                 const workData = workItems.get(item.id);
-                const currentStatus = workData?.status || item.status;
+                const rawStatus = workData?.status ?? item.status;
+                const currentStatus = rawStatus === 'OVERDUE' || rawStatus === 'DEFERRED' ? rawStatus : 'DEFERRED';
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
@@ -490,6 +551,7 @@ export function WorkspacePanel({
                         type="checkbox"
                         checked={selectedItems.has(item.id)}
                         onChange={() => handleToggleItem(item.id)}
+                        disabled={!onSave}
                         className="h-4 w-4 rounded border-input"
                       />
                     </TableCell>
@@ -502,6 +564,7 @@ export function WorkspacePanel({
                         value={currentStatus}
                         onChange={(e) => handleStatusChange(item.id, e.target.value as 'OVERDUE' | 'DEFERRED')}
                         className="w-32"
+                        disabled={!onSave}
                       >
                         <option value="OVERDUE">Vencido</option>
                         <option value="DEFERRED">Diferido</option>
@@ -512,6 +575,7 @@ export function WorkspacePanel({
                         value={workData?.area || ''}
                         onChange={(e) => handleAreaChange(item.id, e.target.value)}
                         className="w-40"
+                        disabled={!onSave}
                       >
                         <option value="">Sin asignar</option>
                         {AREAS.map(area => (

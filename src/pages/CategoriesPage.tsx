@@ -95,7 +95,7 @@ export function CategoriesPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Categorías de Gastos</h1>
         <p className="text-muted-foreground">
-          Las categorías clasifican automáticamente los gastos de tu extracto bancario
+          Agrupá conceptos del extracto (ej. IVA PATO, IVA GATO → IVA) para clasificar y excluir más fácil en cada conciliación.
         </p>
       </div>
 
@@ -105,20 +105,17 @@ export function CategoriesPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p>
-            <strong>Clasificación automática:</strong> Cuando hacés una conciliación, el sistema analiza cada 
-            concepto del extracto y lo clasifica automáticamente según las reglas que definís aquí.
+            <strong>Agrupar conceptos:</strong> Definí categorías (ej. &quot;IVA&quot;) y reglas que matchean texto del concepto. 
+            Así &quot;IVA PATO&quot;, &quot;IVA GATO&quot;, &quot;IVA PERRO&quot; se clasifican todos como <strong>IVA</strong>.
           </p>
           <div className="space-y-1">
-            <p><strong>Ejemplo práctico:</strong></p>
+            <p><strong>En la conciliación:</strong></p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
-              <li>Concepto: "COMISION MANTENIMIENTO" → se clasifica como "Comisiones bancarias"</li>
-              <li>Concepto: "IMPUESTO DEBITO" → se clasifica como "Impuesto a los débitos"</li>
+              <li>En <strong>Exclusiones</strong> podés excluir por categoría de una: &quot;Excluir todos esta categoría&quot; (IVA, Comisiones, etc.).</li>
+              <li>En el modal de exclusión también aparecen las categorías por regla para excluir en un click.</li>
+              <li>En el reporte y Excel exportado cada línea lleva su categoría asignada.</li>
             </ul>
           </div>
-          <p>
-            <strong>Beneficio:</strong> En el reporte final (y el Excel exportado) vas a ver cada movimiento 
-            con su categoría asignada, listo para análisis contable sin clasificar manualmente.
-          </p>
         </CardContent>
       </Card>
 
@@ -210,15 +207,15 @@ export function CategoriesPage() {
                 </Button>
               </div>
               <CardDescription>
-                {category.rules.length} {category.rules.length === 1 ? 'regla' : 'reglas'}
+                {(category.rules ?? []).length} {(category.rules ?? []).length === 1 ? 'regla' : 'reglas'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {category.rules.length === 0 ? (
+              {(category.rules ?? []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sin reglas</p>
               ) : (
                 <div className="space-y-2">
-                  {category.rules.map((rule) => (
+                  {(category.rules ?? []).map((rule) => (
                     <div
                       key={rule.id}
                       className="flex items-center justify-between rounded-md border p-2"

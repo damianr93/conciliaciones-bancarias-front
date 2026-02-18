@@ -67,7 +67,7 @@ export const runReconciliationThunk = (token: string) =>
     dispatch(setCurrentRunError(null));
 
     const { reconciliations } = getState();
-    const { extract, system, mapping, windowDays, cutDate, bankName, excludeConcepts } = reconciliations;
+    const { extract, system, mapping, windowDays, cutDate, bankName, excludeConcepts, enabledCategoryIds } = reconciliations;
 
     try {
       const summary = await apiRunReconciliation(token, {
@@ -75,6 +75,7 @@ export const runReconciliationThunk = (token: string) =>
         bankName: bankName || undefined,
         windowDays,
         cutDate: cutDate || undefined,
+        enabledCategoryIds: enabledCategoryIds?.length ? enabledCategoryIds : undefined,
         extract: {
           rows: extract.rows,
           mapping: mapping.extract,

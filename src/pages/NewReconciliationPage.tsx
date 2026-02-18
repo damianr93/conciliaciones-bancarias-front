@@ -15,6 +15,7 @@ import {
   setCutDate,
   setBankName,
   setExcludeConcepts,
+  setEnabledCategoryIds,
   resetReconciliation,
 } from '@/store/slices/reconciliationsSlice';
 import {
@@ -22,6 +23,7 @@ import {
   parseSystemFileThunk,
   runReconciliationThunk,
 } from '@/store/thunks/reconciliationsThunks';
+import { fetchCategoriesThunk } from '@/store/thunks/expensesThunks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -33,14 +35,19 @@ export function NewReconciliationPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const token = useAppSelector((state) => state.auth.token);
-  const { extract, system, mapping, windowDays, cutDate, bankName, excludeConcepts, currentRun } = 
+  const { extract, system, mapping, windowDays, cutDate, bankName, excludeConcepts, enabledCategoryIds, currentRun } =
     useAppSelector((state) => state.reconciliations);
+  const categories = useAppSelector((state) => state.expenses.categories);
 
   useEffect(() => {
     return () => {
       dispatch(resetReconciliation());
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (token) dispatch(fetchCategoriesThunk(token));
+  }, [dispatch, token]);
 
   useEffect(() => {
     if (token && extract.file) {
@@ -510,6 +517,41 @@ export function NewReconciliationPage() {
                     </p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+          {categories.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <Label>Categorías que aplican a esta conciliación</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Solo se usarán las reglas de las categorías marcadas para clasificar conceptos del extracto
+                </p>
+              </div>
+              <div className="rounded-md border bg-card max-h-[200px] overflow-y-auto p-4 space-y-2">
+                {categories.map((cat) => (
+                  <label
+                    key={cat.id}
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={enabledCategoryIds.includes(cat.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          dispatch(setEnabledCategoryIds([...enabledCategoryIds, cat.id]));
+                        } else {
+                          dispatch(setEnabledCategoryIds(enabledCategoryIds.filter((id) => id !== cat.id)));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <span className="text-sm font-medium">{cat.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({(cat.rules ?? []).length} regla(s))
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
           )}

@@ -18,7 +18,10 @@ const expensesSlice = createSlice({
   initialState,
   reducers: {
     setCategories: (state, action: PayloadAction<ExpenseCategory[]>) => {
-      state.categories = action.payload;
+      state.categories = (action.payload ?? []).map((cat) => ({
+        ...cat,
+        rules: cat.rules ?? [],
+      }));
       state.isLoading = false;
       state.error = null;
     },
@@ -30,7 +33,11 @@ const expensesSlice = createSlice({
       state.isLoading = false;
     },
     addCategory: (state, action: PayloadAction<ExpenseCategory>) => {
-      state.categories.push(action.payload);
+      const cat = action.payload;
+      state.categories.push({
+        ...cat,
+        rules: cat.rules ?? [],
+      });
     },
     removeCategory: (state, action: PayloadAction<string>) => {
       state.categories = state.categories.filter(cat => cat.id !== action.payload);
@@ -38,12 +45,13 @@ const expensesSlice = createSlice({
     addRule: (state, action: PayloadAction<{ categoryId: string; rule: ExpenseCategory['rules'][0] }>) => {
       const category = state.categories.find(cat => cat.id === action.payload.categoryId);
       if (category) {
+        if (!category.rules) category.rules = [];
         category.rules.push(action.payload.rule);
       }
     },
     removeRule: (state, action: PayloadAction<string>) => {
       for (const category of state.categories) {
-        category.rules = category.rules.filter(rule => rule.id !== action.payload);
+        category.rules = (category.rules ?? []).filter(rule => rule.id !== action.payload);
       }
     },
   },

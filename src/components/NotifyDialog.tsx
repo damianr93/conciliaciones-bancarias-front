@@ -18,7 +18,10 @@ export function NotifyDialog({ open, onClose, pendingByArea, onSubmit }: NotifyD
   const [customMessage, setCustomMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const areas = Object.keys(pendingByArea).filter(area => pendingByArea[area] > 0);
+  const VALID_AREAS = ['Dirección', 'Tesorería'];
+  const areas = Object.keys(pendingByArea).filter(
+    (area) => pendingByArea[area] > 0 && VALID_AREAS.includes(area),
+  );
 
   const handleSubmit = async () => {
     if (selectedAreas.length === 0) {

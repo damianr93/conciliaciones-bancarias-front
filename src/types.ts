@@ -24,6 +24,7 @@ export type RunPayload = {
   accountRef?: string;
   windowDays?: number;
   cutDate?: string;
+  enabledCategoryIds?: string[];
   extract: {
     rows: Record<string, unknown>[];
     mapping: Mapping['extract'];
@@ -83,7 +84,7 @@ export type ExtractLine = {
   concept: string | null;
   amount: number;
   excluded?: boolean;
-  category?: { name: string } | null;
+  category?: { id: string; name: string } | null;
 };
 
 export type SystemLine = {
@@ -119,6 +120,24 @@ export type PendingItem = {
   systemLine?: SystemLine;
 };
 
+export type IssueComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: { email: string };
+};
+
+export type Issue = {
+  id: string;
+  title: string;
+  body: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { email: string };
+  comments: IssueComment[];
+};
+
 export type RunDetail = {
   id: string;
   title?: string;
@@ -126,6 +145,7 @@ export type RunDetail = {
   status?: RunStatus;
   createdById?: string;
   excludeConcepts?: string[];
+  enabledCategoryIds?: string[];
   createdAt: string;
   extractLines: ExtractLine[];
   systemLines: SystemLine[];
@@ -135,8 +155,10 @@ export type RunDetail = {
   messages: Message[];
   members: Array<{
     id: string;
+    userId: string;
     role: string;
     user: { email: string };
   }>;
   pendingItems?: PendingItem[];
+  issues?: Issue[];
 };

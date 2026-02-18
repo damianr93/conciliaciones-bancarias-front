@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { loginThunk } from '@/store/thunks/authThunks';
@@ -8,12 +8,34 @@ import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { toast } from 'sonner';
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    if (!decoded.exp) return false;
+    return decoded.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function LoginPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const { token, isLoading, error } = useAppSelector((state) => state.auth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (token && !isTokenExpired(token)) {
+      navigate('/', { replace: true });
+    }
+  }, [token, navigate]);
+
+  if (token && !isTokenExpired(token)) {
+    return null;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

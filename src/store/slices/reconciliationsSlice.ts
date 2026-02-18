@@ -38,6 +38,7 @@ interface ReconciliationsState {
   cutDate: string;
   bankName: string;
   excludeConcepts: string[];
+  enabledCategoryIds: string[];
   currentRun: {
     summary: RunSummary | null;
     detail: RunDetail | null;
@@ -91,6 +92,7 @@ const initialState: ReconciliationsState = {
   cutDate: '',
   bankName: '',
   excludeConcepts: [],
+  enabledCategoryIds: [],
   currentRun: {
     summary: null,
     detail: null,
@@ -193,6 +195,9 @@ const reconciliationsSlice = createSlice({
     setExcludeConcepts: (state, action: PayloadAction<string[]>) => {
       state.excludeConcepts = action.payload;
     },
+    setEnabledCategoryIds: (state, action: PayloadAction<string[]>) => {
+      state.enabledCategoryIds = action.payload;
+    },
     setCurrentRunSummary: (state, action: PayloadAction<RunSummary>) => {
       state.currentRun.summary = action.payload;
       state.currentRun.isLoading = false;
@@ -200,6 +205,9 @@ const reconciliationsSlice = createSlice({
     },
     setCurrentRunDetail: (state, action: PayloadAction<RunDetail>) => {
       state.currentRun.detail = action.payload;
+    },
+    setCurrentRunStatus: (state, action: PayloadAction<'OPEN' | 'CLOSED'>) => {
+      if (state.currentRun.detail) state.currentRun.detail.status = action.payload;
     },
     setCurrentRunLoading: (state, action: PayloadAction<boolean>) => {
       state.currentRun.isLoading = action.payload;
@@ -243,8 +251,10 @@ export const {
   setCutDate,
   setBankName,
   setExcludeConcepts,
+  setEnabledCategoryIds,
   setCurrentRunSummary,
   setCurrentRunDetail,
+  setCurrentRunStatus,
   setCurrentRunLoading,
   setCurrentRunError,
   setRuns,

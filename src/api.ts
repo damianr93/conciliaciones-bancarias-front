@@ -5,6 +5,7 @@ import type {
   RunDetail,
   ExpenseCategory,
   Message,
+  Issue,
 } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -18,6 +19,14 @@ export async function apiLogin(email: string, password: string) {
   if (!res.ok) {
     throw new Error('Credenciales inválidas');
   }
+  return res.json();
+}
+
+export async function apiMe(token: string): Promise<{ id: string; email: string; role: string }> {
+  const res = await fetch(`${BASE_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Sesión inválida');
   return res.json();
 }
 
@@ -51,7 +60,7 @@ export async function apiGetRun(token: string, id: string): Promise<RunDetail> {
 export async function apiUpdateRun(
   token: string,
   id: string,
-  data: { status?: 'OPEN' | 'CLOSED'; bankName?: string | null },
+  data: { status?: 'OPEN' | 'CLOSED'; bankName?: string | null; enabledCategoryIds?: string[] },
 ): Promise<RunDetail> {
   const res = await fetch(`${BASE_URL}/reconciliations/${id}`, {
     method: 'PATCH',
@@ -101,6 +110,66 @@ export async function apiAddExcludedConcept(
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || 'No se pudo excluir concepto');
+  }
+  return res.json();
+}
+
+export async function apiExcludeConcepts(
+  token: string,
+  runId: string,
+  concepts: string[],
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/exclude-concepts`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ concepts }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo excluir conceptos');
+  }
+  return res.json();
+}
+
+export async function apiExcludeByCategory(
+  token: string,
+  runId: string,
+  categoryId: string,
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/exclude-by-category`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ categoryId }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo excluir por categoría');
+  }
+  return res.json();
+}
+
+export async function apiRemoveExcludedConcept(
+  token: string,
+  runId: string,
+  concept: string,
+): Promise<RunDetail> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/remove-excluded-concept`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ concept }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'No se pudo quitar la exclusión');
   }
   return res.json();
 }
@@ -169,6 +238,21 @@ export async function apiShareRun(
   });
   if (!res.ok) throw new Error('No se pudo compartir');
   return res.json();
+}
+
+export async function apiRemoveMember(
+  token: string,
+  runId: string,
+  userId: string,
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/members/${userId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || 'No se pudo quitar el usuario');
+  }
 }
 
 export async function apiAddMessage(
@@ -316,7 +400,7 @@ export async function apiNotifyPending(
   token: string,
   runId: string,
   data: { areas: string[]; customMessage?: string }
-) {
+): Promise<Array<{ area: string; email: string; sent: boolean; error?: string }>> {
   const res = await fetch(`${BASE_URL}/reconciliations/${runId}/notify`, {
     method: 'POST',
     headers: {
@@ -325,6 +409,77 @@ export async function apiNotifyPending(
     },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('No se pudo enviar notificación');
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof body.message === 'string' ? body.message : body.message?.join?.(' ') || 'No se pudo enviar notificación');
+  }
+  const results: Array<{ area: string; email: string; sent: boolean; error?: string }> = body || [];
+  const failed = results.filter((r: { sent: boolean }) => !r.sent);
+  if (failed.length > 0) {
+    const msg = failed.map((r: { area: string; error?: string }) => `${r.area}: ${r.error || 'Error'}`).join('; ');
+    throw new Error(msg);
+  }
+  return results;
+}
+
+export async function apiCreateIssue(
+  token: string,
+  runId: string,
+  data: { title: string; body?: string }
+): Promise<Issue> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/issues`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || 'No se pudo crear el issue');
+  }
+  return res.json();
+}
+
+export async function apiUpdateIssue(
+  token: string,
+  runId: string,
+  issueId: string,
+  data: { title?: string; body?: string }
+): Promise<Issue> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/issues/${issueId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || 'No se pudo actualizar el issue');
+  }
+  return res.json();
+}
+
+export async function apiAddIssueComment(
+  token: string,
+  runId: string,
+  issueId: string,
+  body: string
+): Promise<Issue['comments'][0]> {
+  const res = await fetch(`${BASE_URL}/reconciliations/${runId}/issues/${issueId}/comments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || 'No se pudo agregar el comentario');
+  }
   return res.json();
 }
